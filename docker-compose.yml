@@ -1,0 +1,50 @@
+version: '3.3'
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - TZ=Asia/Yekaterinburg
+      #- POSTGRES_USER=confluence
+      - POSTGRES_DB=confluence
+      - POSTGRES_PASSWORD=PASSWORD
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    #ports:
+      #- 5432:5432
+    restart: unless-stopped
+    networks:
+      - confnet
+
+  confluence:
+    image: atlassian/confluence:8.1.0-m78-jdk11
+    container_name: confluence
+    environment:
+      - TZ=Asia/Yekaterinburg
+      - JAVA_OPTS='-javaagent:/opt/atlassian/confluence/atlassian-agent.jar'
+      - ATL_JDBC_URL=jdbc:postgresql://postgres:5432/confluence
+      - ATL_JDBC_USER=postgres
+      - ATL_JDBC_PASSWORD=PASSWORD
+      - ATL_DB_TYPE=postgresql
+    volumes:
+      - ./confluence:/var/atlassian/application-data/confluence
+      - ./atlassian-agent.jar:/opt/atlassian/confluence/atlassian-agent.jar
+      #- /docker/server.xml:/opt/atlassian/confluence/conf/server.xml:ro
+      #- /docker/setenv.sh:/opt/atlassian/confluence/bin/setenv.sh:ro
+    ports:
+      - 8090:8090
+      - 8091:8091
+    restart: unless-stopped
+    networks:
+      - confnet
+    depends_on:
+      - postgres
+
+networks:
+  confnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.18.0.0/24"
